@@ -13,6 +13,9 @@ create the init.sql file to initialize a database.
 Create a database if it doesn't already exist, called anonymized_patient_records with a primary key that is a uuid named "uuid" (not null), and a varchar(15) named favorite_color .  
 create a second database if it doesn't already exist called patient_uuid_cache which has a composite primary key of a text field named "name" and a date field named "dob" and a uuid field named "uuid". All of these fields are not null.
 
+-----
+#Create a quick script to feed data into Kafka so that I can check if everything is running correctly.
+Create a script that takes a user input for how many records to send to Kafka - default to 10. Using structlog create JSON logging. Configure the logs to write to a file named kontakt.log and set the default log level to debug. Using confluent create a kafka producer. Using faker create the number of records from the input, each record has a "name" that is a first and last name, a "DOB" that is a date of birth within the past 90 years, and a "favorite_color" which is a valid color name. Log the record created in the debug level. Send it to the kafka producer as json encoded as utf-8. Once they're all sent then flush the producer and log the completion at the info level.
 
 ----------
 # prompts to create the pyspark script

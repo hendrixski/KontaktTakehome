@@ -1,1 +1,60 @@
-# 
+version: "3.9"
+
+networks:
+  kontakt-net:
+    driver: bridge
+
+services:
+  kafka:
+    image: bitnami/kafka:3.5
+    container_name: kafka
+    networks:
+      - kontakt-net
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_KRAFT_CLUSTER_ID=KontaktTakehomeCluster
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    command: >
+      bash -c "
+        /opt/bitnami/scripts/kafka/entrypoint.sh /opt/bitnami/scripts/kafka/run.sh &
+        while ! kafka-topics.sh --bootstrap-server localhost:9092 --list; do sleep 1; done
+        && kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic kontakt-topic --replication-factor 1 --partitions 1
+        && wait
+      "
+
+  spark:
+    image: bitnami/spark:3.5.3
+    container_name: spark
+    networks:
+      - kontakt-net
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+    ports:
+      - "8080:8080"   # Spark master web UI
+      - "7077:7077"   # Spark master port
+      - "8081:8081"   # Spark worker web UI
+    volumes:
+      - /pyspark:/opt/bitnami/spark/app
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    networks:
+      - kontakt-net
+    environment:
+      - POSTGRES_USER=kontakt
+      - POSTGRES_PASSWORD=k0ntakt_10
+      - POSTGRES_DB=kontact_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./kontakt_database:/var/lib/postgresql/data

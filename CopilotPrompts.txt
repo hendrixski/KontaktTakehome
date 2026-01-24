@@ -6,3 +6,24 @@ Create 3 containers in the services:
 2) a single Spark container for both master and worker using bitnami/spark:3.5.3 . Set SPARK_RPC_AUTHENTICATION_ENABLED=no .  Mount my local directory /pyspark to the app code directory in the container. 
 3) a container for a Postgres database using the latest image. Set the username kontakt and the password as k0ntakt_10 and the database name to kontact_database . In volumnes, mount a local file named init.sql to the entrypoint directory of the postgres container.  Mount another volume for a local file name kontakt_database to the postgresql data directory so that we can persist data between container sessions.
 
+--------
+
+# chat prompt used to compose the database creation SQL
+create the init.sql file to initialize a database.
+Create a database if it doesn't already exist, called anonymized_patient_records with a primary key that is a uuid named "uuid" (not null), and a varchar(15) named favorite_color .  
+create a second database if it doesn't already exist called patient_uuid_cache which has a composite primary key of a text field named "name" and a date field named "dob" and a uuid field named "uuid". All of these fields are not null.
+
+
+----------
+# prompts to create the pyspark script
+
+
+
+---
+# prompts to create the end-to-end testing script
+
+
+
+-----
+# other miscelaneous prompts
+

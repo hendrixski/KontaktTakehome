@@ -33,7 +33,7 @@ def main():
 
     logger = configure_logger()
 
-    producer = Producer({'bootstrap.servers': 'localhost:9092'})
+    producer = Producer({'bootstrap.servers': 'localhost:29092'})
     fake = Faker()
 
     for _ in range(args.num_records):
@@ -44,7 +44,7 @@ def main():
         }
         logger.debug("Generated record", record=record)
         producer.produce(
-            topic="records",
+            topic="kontakt_topic",
             value=json.dumps(record).encode("utf-8"),
             callback=delivery_report
         )

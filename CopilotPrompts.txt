@@ -1,0 +1,8 @@
+# chat prompt that I used to create the first version of the docker-compose file
+Create a Docker configuration.yml file at the latest version.
+Create a bridge network and call it kontakt-net. Use it in all containers. Each container should have its relevant ports exposed (including the sparkmaster web UI, )
+Create 3 containers in the services:
+1) kafka in kraft mode using a bitnami/kafka:3.5 . set the cluster ID to KontaktTakehomeCluster and use reasonable defaults for the quorum and network listeners. Add a command to start kafka and when it's ready then create a topic called kontakt-topic . A single replication factor is fine and use default ports
+2) a single Spark container for both master and worker using bitnami/spark:3.5.3 . Set SPARK_RPC_AUTHENTICATION_ENABLED=no .  Mount my local directory /pyspark to the app code directory in the container. 
+3) a container for a Postgres database using the latest image. Set the username kontakt and the password as k0ntakt_10 and the database name to kontact_database . In volumnes, mount a local file named init.sql to the entrypoint directory of the postgres container.  Mount another volume for a local file name kontakt_database to the postgresql data directory so that we can persist data between container sessions.
+

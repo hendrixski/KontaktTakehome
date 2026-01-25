@@ -2,7 +2,7 @@
 from pyspark.sql import SparkSession
 
 # Create Spark session
-spark = SparkSession.builder.appName("KafkaStreamExample").getOrCreate()
+spark = SparkSession.builder.appName("KontactPrototype").getOrCreate()
 
 # Read stream from Kafka
 df = (

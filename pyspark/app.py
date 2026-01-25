@@ -8,7 +8,7 @@ spark = SparkSession.builder.appName("KafkaStreamExample").getOrCreate()
 df = (
     spark.readStream
     .format("kafka")
-    .option("kafka.bootstrap.servers", "localhost:29092")
+    .option("kafka.bootstrap.servers", "kafka:9092")
     .option("subscribe", "kontakt-topic")
     .load()
 )

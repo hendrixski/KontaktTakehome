@@ -49,7 +49,7 @@ services:
         
 
   spark:
-    image: bitnami/spark:3.5.3
+    image: bitnamilegacy/spark:3.5.3
     container_name: spark
     networks:
       - kontakt-net

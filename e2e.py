@@ -3,7 +3,7 @@ import json
 import structlog
 import logging
 from faker import Faker
-from confluent_kafka import Producer
+from confluent_kafka import Producer, Consumer, KafkaError
 
 def configure_logger():
     logging.basicConfig(
@@ -51,6 +51,26 @@ def main():
 
     producer.flush()
     logger.info("All records sent", count=args.num_records)
+
+    # Consumer to verify records
+#    consumer = Consumer({
+#        'bootstrap.servers': 'localhost:29092',
+#        'group.id': 'kontakt_group',
+#        'auto.offset.reset': 'earliest'
+#    })
+#    consumer.subscribe(['kontakt_topic'])
+#    msg_count = 0
+#    while msg_count < args.num_records:
+#        msg = consumer.poll(1.0)
+#        if msg is None:
+#            continue
+#        if msg.error():
+#            logger.error("Consumer error", error=msg.error())
+#            continue
+#        record = json.loads(msg.value().decode('utf-8'))
+#        logger.info("Consumed record", record=record)
+#        msg_count += 1
+#        
 
 if __name__ == "__main__":
     main()

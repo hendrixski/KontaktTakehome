@@ -3,3 +3,5 @@ confluent-kafka
 pyspark==3.5.3
 faker
 structlog
+psycopg2
+types-psycopg2

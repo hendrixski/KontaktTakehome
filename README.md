@@ -22,7 +22,7 @@ This prototype runs in a containerized environment. Ensure you have Docker and t
 
 Bash  
 sudo apt update  
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin postgresql-client
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin postgresql-client libpq-dev python3-dev
 
 *For Windows or macOS, please install **Docker Desktop**.*
 
@@ -57,10 +57,14 @@ docker compose up
 Currently, the Spark processing engine requires manual submission to the cluster. In a new terminal window, run:
 
 Bash  
-docker exec \-it spark /opt/bitnami/spark/bin/spark-submit \\  
-  \--master spark://spark:7077 \\  
-  \--packages org.apache.spark:spark-sql-kafka-0-10\_2.12:3.5.0 \\  
+docker exec -it kontakttakehome-spark-master-1 /opt/bitnami/spark/bin/spark-submit \
+  --master spark://spark-master:7077 
+  --executor-memory 1G \
+  --driver-memory 512M \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 \
   ./app/app.py
+
+NOTE: The executor-memory and driver-memory parameters may not be necessary on your machine so if you want to test larger throughput then you would set those much higher
 
 ### **3\. Run the End-to-End Test**
 

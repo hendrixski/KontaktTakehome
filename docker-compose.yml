@@ -75,10 +75,10 @@ services:
       - kontakt-net
     environment:
       - POSTGRES_USER=kontakt
-      - POSTGRES_PASSWORD=k0ntakt_10
-      - POSTGRES_DB=kontact_database
+      - POSTGRES_PASSWORD=k0ntakt
+      - POSTGRES_DB=kontakt_database
     ports:
       - "5432:5432"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./kontakt_database:/var/lib/postgresql/data
+      - ./kontakt_database:/var/lib/postgresql

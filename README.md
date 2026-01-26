@@ -22,7 +22,7 @@ This prototype runs in a containerized environment. Ensure you have Docker and t
 
 Bash  
 sudo apt update  
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin postgresql-client
 
 *For Windows or macOS, please install **Docker Desktop**.*
 
@@ -68,6 +68,9 @@ Once the Spark job is running and the infrastructure is healthy, execute the tes
 
 Bash  
 python e2e.py
+
+
+The test checks the database, if you wish to inspect the database yourself connect to database kontakt_database port 5432 with user kontakt and the password k0ntakt 
 
 ---
 

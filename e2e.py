@@ -44,7 +44,7 @@ def main():
         }
         logger.debug("Generated record", record=record)
         producer.produce(
-            topic="kontakt_topic",
+            topic="kontakt-topic",
             value=json.dumps(record).encode("utf-8"),
             callback=delivery_report
         )

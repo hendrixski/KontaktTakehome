@@ -51,22 +51,37 @@ services:
         wait
         
 
-  spark:
+
+  spark-master:
     image: bitnamilegacy/spark:3.5.3
-    container_name: spark
-    networks:
-      - kontakt-net
     environment:
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_WORKER_CORES=1
-      - SPARK_WORKER_MEMORY=2G
     ports:
-      - "8080:8080"   # Spark master web UI
-      - "7077:7077"   # Spark master port
-      - "8081:8081"   # Spark worker web UI
+      - "7077:7077"
+      - "8080:8080"
     volumes:
       - ./pyspark:/opt/bitnami/spark/app
+    networks:
+      - kontakt-net
+
+  spark-worker:
+    image: bitnamilegacy/spark:3.5.3
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=2G
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"
+    networks:
+      - kontakt-net
+    volumes:
+      - ./pyspark:/opt/bitnami/spark/app
+
+
 
   postgres:
     image: postgres:latest

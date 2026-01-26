@@ -1,6 +1,8 @@
 # Create a pyspark dataframe that reads a stream from Kafka: from a broker on port 29092. Subscribe to the the topic "kontakt-topic". 
 from pyspark.sql import SparkSession
+import uuid
 
+print("!!!STARTING MY SPARK APP!!!")
 # Create Spark session
 spark = SparkSession.builder.appName("KontactPrototype").getOrCreate()
 

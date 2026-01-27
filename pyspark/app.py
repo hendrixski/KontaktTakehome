@@ -62,55 +62,67 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
 
     joined_df = batch_df.join(cache_df, on=["name", "DOB"], how="left")
 
-    logger.info("------------- CACHE DF SCHEMA IS ----------")
-    cache_df.limit(10).show()
 
-    logger.info("------------- MERGED DF SCHEMA IS ----------")
-    joined_df.limit(10).show()
 
 
     #create a dataframe with only the rows from joined_df where the uuid is null
     #these are the new rows that need to be assigned a uuid
     new_rows_df = joined_df.filter(joined_df.uuid.isNull())
-    old_rows_df = joined_df.filter(joined_df.uuid.isNotNull())
-    #new_rows_df.limit(10).show()
+    old_rows_df = joined_df.filter(joined_df.uuid.isNotNull()) \
+            .select("uuid", "favorite_color")
+
 
     #for each row in new_rows_df, generate a new uuid and add it to the row
-    def assign_uuid(row):
-        return row.asDict() | {"uuid": str(uuid.uuid4())}
-    #new_rows_with_uuid_df = new_rows_df.rdd.map(assign_uuid).toDF()
-    new_rows_with_uuid_df = new_rows_df.withColumn("uuid", F.expr("uuid()"))
+    new_rows_with_uuid_df = new_rows_df.withColumn("uuid", F.expr("uuid()")) 
+    new_rows_with_uuid_df_for_cache = new_rows_with_uuid_df.select("uuid", "name", "DOB")
+    new_rows_with_uuid_df_for_anonymized = new_rows_with_uuid_df.select("uuid", "favorite_color")
+
+    logger.info("------------- ABOUT TO WRITE THIS SCHEMA  ----------")
+    new_rows_with_uuid_df_for_cache.limit(10).show()
 
     #write the new rows with uuids back to the patient_uuid_cache table in the database
-    new_rows_with_uuid_df.write \
+    new_rows_with_uuid_df_for_cache.write \
             .format("jdbc") \
             .option("driver", "org.postgresql.Driver") \
             .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
             .option("dbtable", "patient_uuid_cache") \
             .option("user", "kontakt") \
             .option("password", "k0ntakt") \
+            .option("stringtype", "unspecified") \
             .mode("append") \
+            .save()
 
+    logger.info("------------- JUST WROTE THAT SCHEMA -------------")
+
+
+    logger.info("------------- ABOUT TO WRITE THIS SCHEMA  ----------")
+    new_rows_with_uuid_df_for_anonymized.limit(10).show()
 
     #write the uuid and favorite_color fields from df to another table in the same database named anonymized_patients
-    new_rows_with_uuid_df.write \
+    new_rows_with_uuid_df_for_anonymized.write \
             .format("jdbc") \
             .option("driver", "org.postgresql.Driver") \
             .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
-            .option("dbtable", "anonymized_patients") \
+            .option("dbtable", "anonymized_patient_records") \
             .option("user", "kontakt") \
             .option("password", "k0ntakt") \
+            .option("stringtype", "unspecified") \
             .mode("append") \
+            .save()
+
+    logger.info("------------- JUST WROTE THAT SCHEMA -------------")
             
     #use the old_rows_df to overwrite the anonymized_patients table
     old_rows_df.select("uuid", "favorite_color").write \
             .format("jdbc") \
             .option("driver", "org.postgresql.Driver") \
             .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
-        .option("dbtablename", "anonymized_patients") \
-        .option("user", "kontakt") \
-        .option("password", "k0ntakt") \
-        .mode("overwrite") 
+            .option("dbtable", "anonymized_patient_records") \
+            .option("user", "kontakt") \
+            .option("password", "k0ntakt") \
+            .option("stringtype", "unspecified") \
+            .mode("overwrite") \
+            .save()
 
     if not batch_df.isEmpty():
         # show the df and force stdout to write everything by flushing stdout

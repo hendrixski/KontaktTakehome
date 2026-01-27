@@ -62,14 +62,16 @@ Currently, the Spark processing engine requires manual submission to the cluster
 
 ```
 docker exec -it kontakttakehome-spark-master-1 /opt/bitnami/spark/bin/spark-submit \
-  --master spark://spark-master:7077 
-  --executor-memory 1G \
-  --driver-memory 512M \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.7.2 \
-  ./app/app.py
+    --master spark://spark-master:7077 
+    --executor-memory 1G \
+    --driver-memory 512M \
+   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.7.2 \
+   ./app/app.py
 ```
 
 NOTE: The executor-memory and driver-memory parameters may not be necessary on your machine so if you want to test larger throughput then you would set those much higher
+
+ALSO NOTE: your docker image may end up with a different name. The docker-compose file calls it spark-master but docker may rename it. So run `docker ps` first to check its name.
 
 ### **3\. Run the End-to-End Test**
 

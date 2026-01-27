@@ -61,46 +61,50 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
             .option("password", "k0ntakt") \
             .load()
 
+    joined_df = batch_df.join(cache_df, on=["name", "DOB"], how="left")
 
     logger.info("------------- CACHE DF SCHEMA IS ----------")
-    cache_df.limit(5).show()
-    #logger.info(cache_df.schema)
-    logger.info("------------- END CACHE DF SCHEMA IS ----------")
+    cache_df.limit(10).show()
+
+    logger.info("------------- MERGED DF SCHEMA IS ----------")
+    joined_df.limit(10).show()
 
 
+    #create a dataframe with only the rows from joined_df where the uuid is null
+    #these are the new rows that need to be assigned a uuid
+    new_rows_df = joined_df.filter(joined_df.uuid.isNull())
+    new_rows_df.limit(10).show()
+    #for each row in new_rows_df, generate a new uuid and add it to the row
+    def assign_uuid(row):
+        return row.asDict() | {"uuid": str(uuid.uuid4())}
+    new_rows_with_uuid_df = new_rows_df.rdd.map(assign_uuid).toDF()
+    #write the new rows with uuids back to the patient_uuid_cache table in the database
+    new_rows_with_uuid_df.write \
+            .format("jdbc") \
+            .option("driver", "org.postgresql.Driver") \
+            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+            .option("dbtable", "patient_uuid_cache") \
+            .option("user", "kontakt") \
+            .option("password", "k0ntakt") \
+            .mode("append") \
+
+
+    #write the uuid and favorite_color fields from new_rows_with_uuid_df to another database table in the same database named anonymized_patients
+    new_rows_df.write \
+            .format("jdbc") \
+            .option("driver", "org.postgresql.Driver") \
+            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+            .option("dbtable", "anonymized_patients") \
+            .option("user", "kontakt") \
+            .option("password", "k0ntakt") \
+            .mode("append") \
+            
 
     if not batch_df.isEmpty():
-        # 3. Use show() but force it to the Driver's stdout
-        # This will appear in your spark-submit terminal
-        print(f"--------Batch {batch_id} has {batch_df.count()} rows------------")
+        # show the df and force stdout to write everything by flushing stdout
+        logger.info(f"--------Batch {batch_id} has {batch_df.count()} rows------------")
         batch_df.show(5)
         sys.stdout.flush()
-
-
-#    tuples_list = [(row['name'], row['DOB']) for row in batch_tuples]
-#    
-#    if not tuples_list:
-#        return batch_df.withColumn("uuid", expr("uuid()")).withColumn("is_new", expr("true"))
-#
-#    #conditions = " OR ".join([f"(name = '{name}' AND DOB = '{dob}')" for name, dob in tuples_list])
-#    #sql_query = f"SELECT name, DOB, uuid FROM kontakt_database WHERE {conditions}"
-#    key_tuples = ", ".join([f"('{row.name}', '{row.DOB}')" for row in batch_tuples])
-#    query_string = f"(SELECT * FROM patient_uuid_cache WHERE (name, \"DOB\") IN ({key_tuples})) as filtered_cache"
-#    
-#    cache_df = spark.read.format("jdbc") \
-#            .option("url", "jdbc:postgresql://db:5432/kontakt_database") \
-#            .option("dbtable", f"({sql_query}) as subquery") \
-#            .option("user", "your_username") \
-#            .option("password", "your_password")
-#    #cache_df.createOrReplaceTempView("cache_table") 
-#    joined_df = batch_df.join(cache_df, on=["name", "DOB"], how="left")
-#    return joined_df
-
-
-
-def printDF(df: DataFrame):
-    df.printSchema()
-    df.show(truncate=False)
 
 
 kafka_df = getKafkaDF(spark)

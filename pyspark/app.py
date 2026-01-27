@@ -1,9 +1,8 @@
 # Create a pyspark dataframe that reads a stream from Kafka: from a broker on port 29092. Subscribe to the the topic "kontakt-topic". 
 from pyspark.sql import SparkSession, DataFrame
 import uuid
-from pyspark.sql.functions import expr
-import logging
 import sys
+from pyspark.sql import functions as F
 
 
 # Create Spark session
@@ -73,11 +72,15 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
     #create a dataframe with only the rows from joined_df where the uuid is null
     #these are the new rows that need to be assigned a uuid
     new_rows_df = joined_df.filter(joined_df.uuid.isNull())
-    new_rows_df.limit(10).show()
+    old_rows_df = joined_df.filter(joined_df.uuid.isNotNull())
+    #new_rows_df.limit(10).show()
+
     #for each row in new_rows_df, generate a new uuid and add it to the row
     def assign_uuid(row):
         return row.asDict() | {"uuid": str(uuid.uuid4())}
-    new_rows_with_uuid_df = new_rows_df.rdd.map(assign_uuid).toDF()
+    #new_rows_with_uuid_df = new_rows_df.rdd.map(assign_uuid).toDF()
+    new_rows_with_uuid_df = new_rows_df.withColumn("uuid", F.expr("uuid()"))
+
     #write the new rows with uuids back to the patient_uuid_cache table in the database
     new_rows_with_uuid_df.write \
             .format("jdbc") \
@@ -89,8 +92,8 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
             .mode("append") \
 
 
-    #write the uuid and favorite_color fields from new_rows_with_uuid_df to another database table in the same database named anonymized_patients
-    new_rows_df.write \
+    #write the uuid and favorite_color fields from df to another table in the same database named anonymized_patients
+    new_rows_with_uuid_df.write \
             .format("jdbc") \
             .option("driver", "org.postgresql.Driver") \
             .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
@@ -99,6 +102,15 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
             .option("password", "k0ntakt") \
             .mode("append") \
             
+    #use the old_rows_df to overwrite the anonymized_patients table
+    old_rows_df.select("uuid", "favorite_color").write \
+            .format("jdbc") \
+            .option("driver", "org.postgresql.Driver") \
+            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+        .option("dbtablename", "anonymized_patients") \
+        .option("user", "kontakt") \
+        .option("password", "k0ntakt") \
+        .mode("overwrite") 
 
     if not batch_df.isEmpty():
         # show the df and force stdout to write everything by flushing stdout

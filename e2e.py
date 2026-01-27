@@ -5,7 +5,6 @@ import logging
 from faker import Faker
 from confluent_kafka import Producer, Consumer, KafkaError
 import psycopg2
-from typing import Optional, TYPE_CHECKING
 from psycopg2.extensions import connection
 
 conn: connection = psycopg2.connect(

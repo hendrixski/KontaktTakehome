@@ -1,4 +1,5 @@
 version: "3.9"
+#TODO export connection data into a .env file so that it can be used across all the processes, and send the relevant connection data to other docker containers
 
 networks:
   kontakt-net:

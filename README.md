@@ -61,7 +61,7 @@ docker exec -it kontakttakehome-spark-master-1 /opt/bitnami/spark/bin/spark-subm
   --master spark://spark-master:7077 
   --executor-memory 1G \
   --driver-memory 512M \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.7.2 \
   ./app/app.py
 
 NOTE: The executor-memory and driver-memory parameters may not be necessary on your machine so if you want to test larger throughput then you would set those much higher

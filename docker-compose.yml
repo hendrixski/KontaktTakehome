@@ -58,6 +58,7 @@ services:
     environment:
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_LOG_LEVEL=WARN
     ports:
       - "7077:7077"
       - "8080:8080"
@@ -73,6 +74,7 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_CORES=1
       - SPARK_WORKER_MEMORY=2G
+      - SPARK_LOG_LEVEL=WARN
     depends_on:
       - spark-master
     ports:

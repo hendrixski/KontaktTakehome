@@ -1,18 +1,21 @@
 # Create a pyspark dataframe that reads a stream from Kafka: from a broker on port 29092. Subscribe to the the topic "kontakt-topic". 
 from pyspark.sql import SparkSession, DataFrame
-import uuid
-import sys
 from pyspark.sql import functions as F
+# import sys
 
 
 # Create Spark session
 spark = SparkSession.builder.appName("KontactPrototype").getOrCreate() 
 spark.sparkContext.setLogLevel("INFO")
-log4jLogger = spark._jvm.org.apache.log4j
-logger = log4jLogger.LogManager.getLogger("STREAMS")
+# log4jLogger = spark._jvm.org.apache.log4j
+# logger = log4jLogger.LogManager.getLogger("STREAMS")
 
-logger.info("--------------STARTING MY APP!!! ------------")
-
+jdbc_options = {
+    "driver": "org.postgresql.Driver",
+    "url": "jdbc:postgresql://postgres:5432/kontakt_database",
+    "user": "kontakt",
+    "password": "k0ntakt"
+}
 
 def getKafkaDF(spark: SparkSession) -> DataFrame:
     # Read stream from Kafka
@@ -31,7 +34,6 @@ def getKafkaDF(spark: SparkSession) -> DataFrame:
             .selectExpr("get_json_object(value, '$.name') as name",
                         "get_json_object(value, '$.DOB') as DOB",
                         "get_json_object(value, '$.favorite_color') as favorite_color") \
-            .drop("value")
 
     return df
 
@@ -41,29 +43,20 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
     #read that sql from a database named kontakt_database into a dataframe named cache_df
     #join batch_df with cache_df on the "name" and "DOB" fields and return it
     if batch_df.isEmpty(): 
-        logger.info("==============batch is empty============")
+        # logger.info("==============batch is empty============")
         return
 
     batch_tuples = batch_df.select("name", "DOB").distinct().collect()
 
     key_tuples = ", ".join([f"('{row.name}', '{row.DOB}')" for row in batch_tuples])
     query_string = f"(SELECT * FROM patient_uuid_cache WHERE (name, DOB) IN ({key_tuples})) as filtered_cache"
-    logger.info("------------- QUERY STRING IS ----------")
-    logger.info(query_string)
 
     cache_df = spark.read.format("jdbc") \
-            .format("jdbc") \
-            .option("driver", "org.postgresql.Driver") \
-            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+            .options(**jdbc_options) \
             .option("dbtable", query_string) \
-            .option("user", "kontakt") \
-            .option("password", "k0ntakt") \
             .load()
 
     joined_df = batch_df.join(cache_df, on=["name", "DOB"], how="left")
-
-
-
 
     #create a dataframe with only the rows from joined_df where the uuid is null
     #these are the new rows that need to be assigned a uuid
@@ -77,58 +70,41 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
     new_rows_with_uuid_df_for_cache = new_rows_with_uuid_df.select("uuid", "name", "DOB")
     new_rows_with_uuid_df_for_anonymized = new_rows_with_uuid_df.select("uuid", "favorite_color")
 
-    logger.info("------------- ABOUT TO WRITE THIS SCHEMA  ----------")
-    new_rows_with_uuid_df_for_cache.limit(10).show()
+    # logger.info("------------- ABOUT TO WRITE THIS SCHEMA  ----------")
+    # new_rows_with_uuid_df_for_cache.limit(10).show()
 
     #write the new rows with uuids back to the patient_uuid_cache table in the database
     new_rows_with_uuid_df_for_cache.write \
             .format("jdbc") \
-            .option("driver", "org.postgresql.Driver") \
-            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+            .options(**jdbc_options) \
             .option("dbtable", "patient_uuid_cache") \
-            .option("user", "kontakt") \
-            .option("password", "k0ntakt") \
             .option("stringtype", "unspecified") \
             .mode("append") \
             .save()
-
-    logger.info("------------- JUST WROTE THAT SCHEMA -------------")
-
-
-    logger.info("------------- ABOUT TO WRITE THIS SCHEMA  ----------")
-    new_rows_with_uuid_df_for_anonymized.limit(10).show()
 
     #write the uuid and favorite_color fields from df to another table in the same database named anonymized_patients
     new_rows_with_uuid_df_for_anonymized.write \
             .format("jdbc") \
-            .option("driver", "org.postgresql.Driver") \
-            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+            .options(**jdbc_options) \
             .option("dbtable", "anonymized_patient_records") \
-            .option("user", "kontakt") \
-            .option("password", "k0ntakt") \
             .option("stringtype", "unspecified") \
             .mode("append") \
             .save()
-
-    logger.info("------------- JUST WROTE THAT SCHEMA -------------")
             
     #use the old_rows_df to overwrite the anonymized_patients table
     old_rows_df.select("uuid", "favorite_color").write \
             .format("jdbc") \
-            .option("driver", "org.postgresql.Driver") \
-            .option("url", "jdbc:postgresql://postgres:5432/kontakt_database") \
+            .options(**jdbc_options) \
             .option("dbtable", "anonymized_patient_records") \
-            .option("user", "kontakt") \
-            .option("password", "k0ntakt") \
             .option("stringtype", "unspecified") \
             .mode("overwrite") \
             .save()
 
-    if not batch_df.isEmpty():
-        # show the df and force stdout to write everything by flushing stdout
-        logger.info(f"--------Batch {batch_id} has {batch_df.count()} rows------------")
-        batch_df.show(5)
-        sys.stdout.flush()
+    # if not batch_df.isEmpty():
+    #     # show the df and force stdout to write everything by flushing stdout
+    #     logger.info(f"--------Batch {batch_id} has {batch_df.count()} rows------------")
+    #     batch_df.show(5)
+    #     sys.stdout.flush()
 
 
 kafka_df = getKafkaDF(spark)

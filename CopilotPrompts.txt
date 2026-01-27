@@ -17,16 +17,31 @@ create a second database if it doesn't already exist called patient_uuid_cache w
 #Create a quick script to feed data into Kafka so that I can check if everything is running correctly.
 Create a script that takes a user input for how many records to send to Kafka - default to 10. Using structlog create JSON logging. Configure the logs to write to a file named kontakt.log and set the default log level to debug. Using confluent create a kafka producer. Using faker create the number of records from the input, each record has a "name" that is a first and last name, a "DOB" that is a date of birth within the past 90 years, and a "favorite_color" which is a valid color name. Log the record created in the debug level. Send it to the kafka producer as json encoded as utf-8. Once they're all sent then flush the producer and log the completion at the info level.
 
-----------
-# prompts to create the pyspark script
-
-
-
----
-# prompts to create the end-to-end testing script
-
-
 
 -----
-# other miscelaneous prompts
+# other miscelaneous prompts  (I lost many of them because I didn't realize that vim doesn't save the Copilot chat history)
 
+When I run spark-submit on my pyspark code, I get an error that says it "requires more resource than any of Workers could have." What configurations should I change and how should I change the docker-compose so that those changes take effect with the container starts up?
+
+I don't see basic logging output from #file:pyspark/app.py What should I do?
+
+When I try to view stdout on the web interface it freezes
+
+This doesn't seem to do what I need it to. I want to add print statements or logging statements into my pyspark app and then be able to view it to see what happened when I ran data through my system. Right now I can't see my print statements in the log output of the worker, nor in the docker-compose output nor in the spark-submit output and the spark_output stdout files are empty.
+
+Looks like the problem is that it's not calling the method that I pass into foreachBatch(). Why would that method not get called if I'm calling it as part of writestream.foreachBatch(my method).outputMode(append).format("console").start()
+Is there anything in my #file:pyspark/app.py that I can do to improve the speed of execution?
+
+When running #pyspark/app.py I get this error when trying to save the new_rows_with_uuid_df_for_cache to the database: "Caused by: org.postgresql.util.PSQLException: ERROR: column "uuid" is of type uuid but expression is of type character varying
+  Hint: You will need to rewrite or cast the expression."
+how can I cast the "uuid" column of my dataframe to type "uuid" for the database?
+
+When running #pyspark/app.py I get this error when trying to save the new_rows_with_uuid_df_for_cache to the database: "Caused by: org.postgresql.util.PSQLException: ERROR: column "uuid" is of type uuid but expression is of type character varying
+  Hint: You will need to rewrite or cast the expression."
+how can I cast the "uuid" column of my dataframe to type "uuid" for the database?
+
+Would there be any performance benefits to calling cache() on kafka_df? It is a readStream and there is no show() or write() method called on it.
+
+In #file://pyspark/app.py 4 different spark dataframes make the same database connection, each using the same options. Can I streamline this so that they all use the same cursor or the same connection?
+
+in #file:pyspark/app.py I have a data frame of new data, that has not been assigned a UUID yet. I am trying to assign a UUID like this: new_rows_df.rdd.map(assign_uuid).toDF() but I get this error: "ValueError: RDD is empty". What could be the problem?

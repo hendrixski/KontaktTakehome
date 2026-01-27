@@ -3,9 +3,10 @@ import json
 import structlog
 import logging
 from faker import Faker
-from confluent_kafka import Producer, Consumer, KafkaError
+from confluent_kafka import Producer
 import psycopg2
 from psycopg2.extensions import connection
+from time import sleep
 
 conn: connection = psycopg2.connect(
     dbname="kontakt_database",
@@ -48,6 +49,7 @@ def main():
     producer = Producer({'bootstrap.servers': 'localhost:29092'})
     fake = Faker()
 
+    test_records = []
     try:
         cursor = conn.cursor()
         for _ in range(args.num_records):
@@ -68,6 +70,8 @@ def main():
                 """
                 cursor.execute(insert_query)
                 logger.debug(f"Inserted record into database name={record['name']}, DOB={record['DOB']}, uuid={new_uuid}")
+            else:
+                test_records.append(record)
             conn.commit()
 
             #send record to Kafka topic "kontakt-topic"
@@ -86,26 +90,26 @@ def main():
         exit(1)
 
 
-    # Consumer to verify records  TODO: wait then add a new cursor
-#    consumer = Consumer({
-#        'bootstrap.servers': 'localhost:29092',
-#        'group.id': 'kontakt_group',
-#        'auto.offset.reset': 'earliest'
-#    })
-#    consumer.subscribe(['kontakt_topic'])
-#    msg_count = 0
-#    while msg_count < args.num_records:
-#        msg = consumer.poll(1.0)
-#        if msg is None:
-#            continue
-#        if msg.error():
-#            logger.error("Consumer error", error=msg.error())
-#            continue
-#        record = json.loads(msg.value().decode('utf-8'))
-#        logger.info("Consumed record", record=record)
-#        msg_count += 1
-#        
-
+    if(len(test_records) > 0):
+        #pick the "name" and "dob" values from the first record from test_records 
+        test_first_name = test_records[0]["name"]
+        test_dob = test_records[0]["DOB"]
+        #wait 5 seconds then open a new cursor using connection conn 
+        #then query database table patient_uuid_cache for the existence of a record with name=test_first_name and dob=test_dob
+        wait_seconds = 5
+        sleep(wait_seconds)
+        cursor = conn.cursor()
+        select_query = f"""
+            SELECT uuid FROM patient_uuid_cache
+            WHERE name = '{test_first_name}' AND DOB = '{test_dob}';
+        """
+        cursor.execute(select_query)
+        result = cursor.fetchone()
+        if result:
+            logger.info("SUCCESS! Test record found in database", name=test_first_name, DOB=test_dob, uuid=result[0])
+        else:
+            logger.error("FAIL! Test record NOT found in database", name=test_first_name, DOB=test_dob)
+        
 
 #conn.close()
 if __name__ == "__main__":

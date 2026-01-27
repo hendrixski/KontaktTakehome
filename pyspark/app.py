@@ -1,20 +1,30 @@
 # Create a pyspark dataframe that reads a stream from Kafka: from a broker on port 29092. Subscribe to the the topic "kontakt-topic". 
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
+import os
 # import sys
 
 
 # Create Spark session
 spark = SparkSession.builder.appName("KontactPrototype").getOrCreate() 
-spark.sparkContext.setLogLevel("INFO")
+#spark.sparkContext.setLogLevel("INFO")
 # log4jLogger = spark._jvm.org.apache.log4j
 # logger = log4jLogger.LogManager.getLogger("STREAMS")
+try:
+    POSTGRES_DB = os.environ['POSTGRES_DB']
+    POSTGRES_USER = os.environ['POSTGRES_USER']
+    POSTGRES_PASSWORD = os.environ['POSTGRES_PASSWORD']
+    DB_CONNECTION_URL = f"jdbc:postgresql://postgres:5432/${POSTGRES_DB}"
+    SPARK_LOG_LEVEL = os.environ.get('SPARK_LOG_LEVEL', 'INFO')
+except KeyError:
+    #logger.warn("Environment Variables are not set")
+    exit(1)
 
 jdbc_options = {
     "driver": "org.postgresql.Driver",
-    "url": "jdbc:postgresql://postgres:5432/kontakt_database",
-    "user": "kontakt",
-    "password": "k0ntakt"
+    "url": DB_CONNECTION_URL,
+    "user": POSTGRES_USER,
+    "password": POSTGRES_PASSWORD
 }
 
 def getKafkaDF(spark: SparkSession) -> DataFrame:

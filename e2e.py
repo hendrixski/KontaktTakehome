@@ -7,11 +7,23 @@ from confluent_kafka import Producer
 import psycopg2
 from psycopg2.extensions import connection
 from time import sleep
+import os
+
+
+try:
+    POSTGRES_DB = os.environ['POSTGRES_DB']
+    POSTGRES_USER = os.environ['POSTGRES_USER']
+    POSTGRES_PASSWORD = os.environ['POSTGRES_PASSWORD']
+    DB_CONNECTION_URL = f"jdbc:postgresql://postgres:5432/${POSTGRES_DB}"
+    SPARK_LOG_LEVEL = os.environ.get('SPARK_LOG_LEVEL', 'INFO')
+except KeyError:
+    #logger.warn("Environment Variables are not set")
+    exit(1)
 
 conn: connection = psycopg2.connect(
-    dbname="kontakt_database",
-    user="kontakt",
-    password="k0ntakt",
+    dbname=POSTGRES_DB,
+    user=POSTGRES_USER,
+    password=POSTGRES_PASSWORD,
     host="localhost",
     port="5432"
 )
@@ -21,7 +33,7 @@ def configure_logger():
     logging.basicConfig(
         filename="kontakt.log",
         filemode="a",
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(message)s"
     )
     structlog.configure(
@@ -30,7 +42,7 @@ def configure_logger():
             structlog.processors.JSONRenderer()
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG),
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
     )
     logging.getLogger('faker').setLevel(logging.ERROR)
     return structlog.get_logger()
@@ -109,6 +121,7 @@ def main():
             logger.info("SUCCESS! Test record found in database", name=test_first_name, DOB=test_dob, uuid=result[0])
         else:
             logger.error("FAIL! Test record NOT found in database", name=test_first_name, DOB=test_dob)
+        cursor.close()
         
 
 #conn.close()

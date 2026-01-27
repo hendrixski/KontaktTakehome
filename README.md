@@ -49,8 +49,14 @@ pip install \-r requirements.txt
 
 ### **1\. Start the Infrastructure**
 
-Pull the code via Git, navigate to the project directory, and launch the containers (Kafka, Spark, and Postgres):
+Pull the code via Git, navigate to the project directory, 
+and source the environment variables. For example:
 
+```
+source sample.env
+```
+
+Then launch the containers (Kafka, Spark, and Postgres):
 
 ```
 docker compose up
@@ -80,7 +86,6 @@ Once the Spark job is running and the infrastructure is healthy, execute the tes
 ```
 python e2e.py
 ```
-
 
 The test checks the database, if you wish to inspect the database yourself connect to database kontakt_database port 5432 with user kontakt and the password k0ntakt 
 

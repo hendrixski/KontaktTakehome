@@ -2,6 +2,8 @@
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 import os
+from datetime import datetime
+
 # import sys
 
 
@@ -59,7 +61,13 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
         logger.info("==============batch is empty============")
         return
 
+    #take a timestamp with datetime for logging
+    #timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp_at_start_of_find_existin_uuids = datetime.utcnow()
+
     batch_tuples = batch_df.select("name", "DOB").distinct().collect()
+
+    timestamp_after_collect = datetime.utcnow()
 
     key_tuples = ", ".join([f"('{row.name}', '{row.DOB}')" for row in batch_tuples])
     query_string = f"(SELECT * FROM patient_uuid_cache WHERE (name, DOB) IN ({key_tuples})) as filtered_cache"
@@ -69,19 +77,27 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
             .option("dbtable", query_string) \
             .load()
 
+    cache_df.collect()  # Force the read to complete
+    timestamp_after_cache_read = datetime.utcnow()
+
     joined_df = batch_df.join(cache_df, on=["name", "DOB"], how="left")
+    joined_df.collect()  # Force the join to complete
+    timestamp_after_join = datetime.utcnow()
 
     #create a dataframe with only the rows from joined_df where the uuid is null
     #these are the new rows that need to be assigned a uuid
     new_rows_df = joined_df.filter(joined_df.uuid.isNull())
     old_rows_df = joined_df.filter(joined_df.uuid.isNotNull()) \
             .select("uuid", "favorite_color")
-
+    #take a timestamp after the filtering
+    timestamp_after_filtering = datetime.utcnow()
 
     #for each row in new_rows_df, generate a new uuid and add it to the row
     new_rows_with_uuid_df = new_rows_df.withColumn("uuid", F.expr("uuid()")) 
     new_rows_with_uuid_df_for_cache = new_rows_with_uuid_df.select("uuid", "name", "DOB")
     new_rows_with_uuid_df_for_anonymized = new_rows_with_uuid_df.select("uuid", "favorite_color")
+
+    timestamp_after_uuid_generation = datetime.utcnow()
 
     # new_rows_with_uuid_df_for_cache.limit(10).show()
     json_list = new_rows_with_uuid_df_for_cache.limit(5).toJSON().collect()
@@ -101,6 +117,9 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
         logger.error(f"------------- Error writing to patient_uuid_cache: {e} ------------")
     else:
         logger.info("------------- Successfully wrote new_rows_with_uuid_df_for_cache to patient_uuid_cache ------------")
+    finally:
+        timestamp_after_cache_write = datetime.utcnow()
+
 
 
     # new_rows_with_uuid_df_for_cache.limit(10).show()
@@ -121,6 +140,8 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
         logger.error(f"-------------- Error writing to anonymized_patient_records: {e}  ----------------")
     else:
         logger.info("------------- Successfully wrote new rows to anonymized_patient_records ------------")
+    finally:
+        timestamp_after_anonymized_write = datetime.utcnow()
             
 
 
@@ -142,7 +163,23 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
         logger.error(f"-------------- Error writing old_rows_df to anonymized_patient_records: {e}  ----------------")
     else:
         logger.info("------------- Successfully appended old_rows_df to anonymized_patient_records with old rows ------------")
+    finally:
+        timestamp_after_old_rows_write = datetime.utcnow()
 
+    timestamp_at_end_of_find_existing_uuids = datetime.utcnow()
+    logger.info(f"""
+                Start time was: {timestamp_at_start_of_find_existin_uuids} ,
+                Timestamp after collect: {timestamp_after_collect} ,
+                Timestamp after cache read: {timestamp_after_cache_read} ,
+                TimTimestamp after join: {timestamp_after_join} ,
+                Timestamp after filtering: {timestamp_after_filtering} ,
+                Timestamp after uuid generation: {timestamp_after_uuid_generation} 
+                Timestamp after cache write: {timestamp_after_cache_write} ,
+                Timestamp after anonymized write: {timestamp_after_anonymized_write} ,
+                Timestamp after old rows write: {timestamp_after_old_rows_write} ,
+                Finish time was: {timestamp_at_end_of_find_existing_uuids} ,
+                Time taken to process batch {batch_id}: {(timestamp_at_end_of_find_existing_uuids - timestamp_at_start_of_find_existin_uuids).total_seconds()} seconds""")
+    
 
 
 

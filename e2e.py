@@ -9,15 +9,15 @@ from psycopg2.extensions import connection
 from time import sleep
 import os
 
-
+POSTGRES_DB=POSTGRES_USER=POSTGRES_PASSWORD=DB_CONNECTION_URL=SPARK_LOG_LEVEL=""
 try:
-    POSTGRES_DB = os.environ['POSTGRES_DB']
-    POSTGRES_USER = os.environ['POSTGRES_USER']
+    POSTGRES_DB =       os.environ['POSTGRES_DB']
+    POSTGRES_USER =     os.environ['POSTGRES_USER']
     POSTGRES_PASSWORD = os.environ['POSTGRES_PASSWORD']
     DB_CONNECTION_URL = f"jdbc:postgresql://postgres:5432/${POSTGRES_DB}"
-    SPARK_LOG_LEVEL = os.environ.get('SPARK_LOG_LEVEL', 'INFO')
+    SPARK_LOG_LEVEL =   os.environ.get('SPARK_LOG_LEVEL', 'INFO')
 except KeyError:
-    #logger.warn("Environment Variables are not set")
+    print("-------Environment Variables are not set-----")
     exit(1)
 
 conn: connection = psycopg2.connect(

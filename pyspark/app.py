@@ -14,11 +14,13 @@ try:
     POSTGRES_DB = os.environ['POSTGRES_DB']
     POSTGRES_USER = os.environ['POSTGRES_USER']
     POSTGRES_PASSWORD = os.environ['POSTGRES_PASSWORD']
-    DB_CONNECTION_URL = f"jdbc:postgresql://postgres:5432/${POSTGRES_DB}"
+    DB_CONNECTION_URL = f"jdbc:postgresql://postgres:5432/{POSTGRES_DB}"
     SPARK_LOG_LEVEL = os.environ.get('SPARK_LOG_LEVEL', 'INFO')
 except KeyError:
     #logger.warn("Environment Variables are not set")
     exit(1)
+
+spark.sparkContext.setLogLevel(SPARK_LOG_LEVEL)
 
 jdbc_options = {
     "driver": "org.postgresql.Driver",

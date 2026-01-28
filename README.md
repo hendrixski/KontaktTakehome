@@ -50,10 +50,12 @@ pip install \-r requirements.txt
 ### **1\. Start the Infrastructure**
 
 Pull the code via Git, navigate to the project directory, 
-and source the environment variables. For example:
+and set up the environment variables for both docker (in a .env file) and for the e2e.py script (sourced). 
+For example:
 
 ```
-source sample.env
+cp sample.env .env
+source .env
 ```
 
 Then launch the containers (Kafka, Spark, and Postgres):
@@ -68,7 +70,7 @@ Currently, the Spark processing engine requires manual submission to the cluster
 
 ```
 docker exec -it kontakttakehome-spark-master-1 /opt/bitnami/spark/bin/spark-submit \
-    --master spark://spark-master:7077 
+    --master spark://spark-master:7077 \
     --executor-memory 1G \
     --driver-memory 512M \
    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.7.2 \

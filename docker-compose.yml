@@ -55,6 +55,8 @@ services:
   spark-master:
     image: bitnamilegacy/spark:3.5.3
     environment:
+      - SPARK_CONF_spark_sql_shuffle_partitions=5
+      - SPARK_CONF_spark_default_parallelism=5
       - SPARK_MODE=master
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
       - SPARK_LOG_LEVEL=${SPARK_LOG_LEVEL}
@@ -76,6 +78,7 @@ services:
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_CORES=1
       - SPARK_WORKER_MEMORY=2G
+      - SPARK_EXECUTOR_MEMORY=1G
       - SPARK_LOG_LEVEL=${SPARK_LOG_LEVEL}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -97,6 +100,8 @@ services:
     networks:
       - kontakt-net
     environment:
+      - SPARK_CONF_spark_sql_shuffle_partitions=5
+      - SPARK_CONF_spark_default_parallelism=5
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}

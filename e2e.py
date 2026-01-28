@@ -122,6 +122,9 @@ def main():
         else:
             logger.error("FAIL! Test record NOT found in database", name=test_first_name, DOB=test_dob)
         cursor.close()
+    else:
+        logger.warning("No test records were generated to verify database insertion.")
+        print("No test records were generated to verify database insertion.")
         
 
 #conn.close()

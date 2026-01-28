@@ -7,9 +7,8 @@ import os
 
 # Create Spark session
 spark = SparkSession.builder.appName("KontactPrototype").getOrCreate() 
-#spark.sparkContext.setLogLevel("INFO")
-# log4jLogger = spark._jvm.org.apache.log4j
-# logger = log4jLogger.LogManager.getLogger("STREAMS")
+
+
 try:
     POSTGRES_DB = os.environ['POSTGRES_DB']
     POSTGRES_USER = os.environ['POSTGRES_USER']
@@ -17,10 +16,12 @@ try:
     DB_CONNECTION_URL = f"jdbc:postgresql://postgres:5432/{POSTGRES_DB}"
     SPARK_LOG_LEVEL = os.environ.get('SPARK_LOG_LEVEL', 'INFO')
 except KeyError:
-    #logger.warn("Environment Variables are not set")
+    logger.warn("Environment Variables are not set")
     exit(1)
 
 spark.sparkContext.setLogLevel(SPARK_LOG_LEVEL)
+log4jLogger = spark._jvm.org.apache.log4j
+logger = log4jLogger.LogManager.getLogger("STREAMS")
 
 jdbc_options = {
     "driver": "org.postgresql.Driver",
@@ -55,7 +56,7 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
     #read that sql from a database named kontakt_database into a dataframe named cache_df
     #join batch_df with cache_df on the "name" and "DOB" fields and return it
     if batch_df.isEmpty(): 
-        # logger.info("==============batch is empty============")
+        logger.info("==============batch is empty============")
         return
 
     batch_tuples = batch_df.select("name", "DOB").distinct().collect()
@@ -82,35 +83,68 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
     new_rows_with_uuid_df_for_cache = new_rows_with_uuid_df.select("uuid", "name", "DOB")
     new_rows_with_uuid_df_for_anonymized = new_rows_with_uuid_df.select("uuid", "favorite_color")
 
-    # logger.info("------------- ABOUT TO WRITE THIS SCHEMA  ----------")
     # new_rows_with_uuid_df_for_cache.limit(10).show()
+    json_list = new_rows_with_uuid_df_for_cache.limit(5).toJSON().collect()
+    for row in json_list:
+        logger.info(f"-----------------  new_rows_with_uuid_df_for_cache DATA_RECORD: {row} ---------------")
 
-    #write the new rows with uuids back to the patient_uuid_cache table in the database
-    new_rows_with_uuid_df_for_cache.write \
-            .format("jdbc") \
-            .options(**jdbc_options) \
-            .option("dbtable", "patient_uuid_cache") \
-            .option("stringtype", "unspecified") \
-            .mode("append") \
-            .save()
+    try:
+        #write the new rows with uuids back to the patient_uuid_cache table in the database
+        new_rows_with_uuid_df_for_cache.write \
+                .format("jdbc") \
+                .options(**jdbc_options) \
+                .option("dbtable", "patient_uuid_cache") \
+                .option("stringtype", "unspecified") \
+                .mode("append") \
+                .save()
+    except Exception as e:
+        logger.error(f"------------- Error writing to patient_uuid_cache: {e} ------------")
+    else:
+        logger.info("------------- Successfully wrote new_rows_with_uuid_df_for_cache to patient_uuid_cache ------------")
 
-    #write the uuid and favorite_color fields from df to another table in the same database named anonymized_patients
-    new_rows_with_uuid_df_for_anonymized.write \
-            .format("jdbc") \
-            .options(**jdbc_options) \
-            .option("dbtable", "anonymized_patient_records") \
-            .option("stringtype", "unspecified") \
-            .mode("append") \
-            .save()
+
+    # new_rows_with_uuid_df_for_cache.limit(10).show()
+    json_list = new_rows_with_uuid_df_for_anonymized.limit(5).toJSON().collect()
+    for row in json_list:
+        logger.info(f" ----------------- new_rows_with_uuid_df_for_anonymized DATA_RECORD: {row} -------------------")
+
+    try:
+        #write the uuid and favorite_color fields from df to another table in the same database named anonymized_patients
+        new_rows_with_uuid_df_for_anonymized.write \
+                .format("jdbc") \
+                .options(**jdbc_options) \
+                .option("dbtable", "anonymized_patient_records") \
+                .option("stringtype", "unspecified") \
+                .mode("append") \
+                .save()
+    except Exception as e:
+        logger.error(f"-------------- Error writing to anonymized_patient_records: {e}  ----------------")
+    else:
+        logger.info("------------- Successfully wrote new rows to anonymized_patient_records ------------")
             
-    #use the old_rows_df to overwrite the anonymized_patients table
-    old_rows_df.select("uuid", "favorite_color").write \
-            .format("jdbc") \
-            .options(**jdbc_options) \
-            .option("dbtable", "anonymized_patient_records") \
-            .option("stringtype", "unspecified") \
-            .mode("overwrite") \
-            .save()
+
+
+    # new_rows_with_uuid_df_for_cache.limit(10).show()
+    json_list = old_rows_df.limit(5).toJSON().collect()
+    for row in json_list:
+        logger.info(f" --------------------- old_rows_df DATA_RECORD: {row} ------------------")
+
+    try:
+        #use the old_rows_df to overwrite the anonymized_patients table
+        old_rows_df.select("uuid", "favorite_color").write \
+                .format("jdbc") \
+                .options(**jdbc_options) \
+                .option("dbtable", "anonymized_patient_records") \
+                .option("stringtype", "unspecified") \
+                .mode("append") \
+                .save()
+    except Exception as e:
+        logger.error(f"-------------- Error writing old_rows_df to anonymized_patient_records: {e}  ----------------")
+    else:
+        logger.info("------------- Successfully appended old_rows_df to anonymized_patient_records with old rows ------------")
+
+
+
 
     # if not batch_df.isEmpty():
     #     # show the df and force stdout to write everything by flushing stdout
@@ -122,9 +156,10 @@ def find_existing_uuids(batch_df: DataFrame, batch_id):
 kafka_df = getKafkaDF(spark)
 # Print the DataFrame contents to the console
 query = (
-    kafka_df.writeStream
-    .foreachBatch(find_existing_uuids)
-    .outputMode("append")
+    kafka_df.writeStream \
+    .foreachBatch(find_existing_uuids) \
+    .trigger(processingTime='2 seconds') \
+    .outputMode("append") \
     .start()
 )
 
